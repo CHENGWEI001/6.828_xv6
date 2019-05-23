@@ -158,18 +158,22 @@ userinit(void)
 int
 growproc(int n)
 {
-  uint sz;
+  // uint sz;
   struct proc *curproc = myproc();
 
-  sz = curproc->sz;
-  if(n > 0){
-    if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
-      return -1;
-  } else if(n < 0){
-    if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
-      return -1;
+  // per HW4 requirement , lazy memory allocation approach
+  if (n <= 0) {
+    return 0;
   }
-  curproc->sz = sz;
+  // sz = curproc->sz;
+  // if(n > 0){
+  //   if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
+  //     return -1;
+  // } else if(n < 0){
+  //   if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
+  //     return -1;
+  // }
+  curproc->sz += n;
   switchuvm(curproc);
   return 0;
 }

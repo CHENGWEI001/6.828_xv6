@@ -13,6 +13,7 @@ struct gatedesc idt[256];
 extern uint vectors[];  // in vectors.S: array of 256 entry pointers
 struct spinlock tickslock;
 uint ticks;
+extern int mappages(pde_t *pgdir, void *va, uint size, uint pa, int perm);
 
 void
 tvinit(void)
@@ -36,6 +37,7 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+  char *mem;
   if(tf->trapno == T_SYSCALL){
     if(myproc()->killed)
       exit();
@@ -77,7 +79,20 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
-
+  // HW4 lazy memory allocation
+  // idea is when the va try to access is causing page fault
+  // that would mean the page for that va is not allocated yet
+  // do PGROUNDDOWN to find page start address for that VA then 
+  // map that with kernel allocated new page
+  case T_PGFLT:
+    // If this is a page fault, allocate new page and map to VA
+    mem = kalloc();
+    if (!mem) {
+      panic("we've run out of memory\n");
+    }
+    memset(mem, 0, PGSIZE);
+    mappages(myproc()->pgdir, (char *) PGROUNDDOWN(rcr2()), PGSIZE, V2P(mem),PTE_W|PTE_U);
+    break;
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){
