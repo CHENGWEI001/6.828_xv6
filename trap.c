@@ -33,6 +33,24 @@ idtinit(void)
   lidt(idt, sizeof(idt));
 }
 
+static void
+alarmhandler(struct trapframe *tf)
+{
+  struct proc *proc = myproc();
+  if (!(proc && (tf->cs & 0x3) == 0x3))
+  	return;
+  if (proc->alarmticks > 0 && proc->alarmhandler != 0) {
+	  proc->tickspassed++;
+  	if (proc->tickspassed == proc->alarmticks) {
+        proc->tickspassed = 0;     
+       
+        tf->esp -= 4;
+        *((uint *)(tf->esp)) = tf->eip;
+        tf->eip = (uint) proc->alarmhandler;
+    }
+  }
+}
+
 //PAGEBREAK: 41
 void
 trap(struct trapframe *tf)
@@ -57,6 +75,7 @@ trap(struct trapframe *tf)
       release(&tickslock);
     }
     lapiceoi();
+    alarmhandler(tf);
     break;
   case T_IRQ0 + IRQ_IDE:
     ideintr();
